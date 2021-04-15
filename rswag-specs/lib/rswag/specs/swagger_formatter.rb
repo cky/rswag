@@ -127,17 +127,28 @@ module Rswag
         mime_list = Array(metadata[:operation][:produces] || swagger_doc[:produces])
         target_node = metadata[:response]
         upgrade_content!(mime_list, target_node)
-        metadata[:response].delete(:schema)
+        upgrade_examples!(mime_list, target_node)
       end
 
       def upgrade_content!(mime_list, target_node)
-        schema = target_node[:schema]
+        schema = target_node.delete(:schema)
         return if mime_list.empty? || schema.nil?
 
         target_node[:content] ||= {}
         mime_list.each do |mime_type|
           # TODO upgrade to have content-type specific schema
           (target_node[:content][mime_type] ||= {}).merge!(schema: schema)
+        end
+      end
+
+      def upgrade_examples!(mime_list, target_node)
+        examples = target_node.delete(:examples)
+        return if mime_list.empty? || examples.nil?
+
+        target_node[:content] ||= {}
+        mime_list.each do |mime_type|
+          example = examples[mime_type] or next
+          (target_node[:content][mime_type] ||= {}).merge!(example: example)
         end
       end
 
