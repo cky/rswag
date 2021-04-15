@@ -70,6 +70,7 @@ module Rswag
                 remove_invalid_operation_keys!(value)
               end
             end
+            remove_invalid_operation_keys!(doc)
           end
 
           file_path = File.join(@config.swagger_root, url_path)
