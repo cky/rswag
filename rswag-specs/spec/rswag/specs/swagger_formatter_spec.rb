@@ -345,6 +345,7 @@ module Rswag
                     produces: ['application/json'],
                     consumes: ['multipart/form-data'],
                     parameters: [{
+                      name: :file,
                       in: :formData,
                       schema: { type: :file }
                     },{
@@ -360,10 +361,10 @@ module Rswag
             expect(doc_2[:paths]['/path/'][:post].keys).to eql([:summary, :tags, :parameters, :requestBody])
           end
 
-          it 'duplicates params in: :formData to requestBody from consumes list' do
+          it 'converts params in: :formData to requestBody from consumes list' do
             expect(doc_2[:paths]['/path/'][:post][:parameters]).to eql([{ in: :headers }])
             expect(doc_2[:paths]['/path/'][:post][:requestBody]).to eql(content: {
-              'multipart/form-data' => { schema: { type: :file } }
+              'multipart/form-data' => { schema: { type: :object, properties: { file: { type: :string, format: :binary } } } }
             })
           end
         end

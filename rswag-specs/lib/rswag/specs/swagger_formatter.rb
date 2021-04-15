@@ -55,7 +55,8 @@ module Rswag
               v.each_pair do |_verb, value|
                 is_hash = value.is_a?(Hash)
                 if is_hash && value.dig(:parameters)
-                  schema_param = value.dig(:parameters)&.find { |p| (p[:in] == :body || p[:in] == :formData) && p[:schema] }
+                  upgrade_form_data_params!(value)
+                  schema_param = value.dig(:parameters)&.find { |p| p[:in] == :body && p[:schema] }
                   mime_list = value.dig(:consumes) || doc[:consumes]
                   if value && schema_param && mime_list
                     value[:requestBody] = { content: {} } unless value.dig(:requestBody, :content)
@@ -65,7 +66,8 @@ module Rswag
                     end
                   end
 
-                  value[:parameters].reject! { |p| p[:in] == :body || p[:in] == :formData }
+                  value[:parameters].reject! { |p| p[:in] == :body }
+                  value.delete(:parameters) if value[:parameters].empty?
                 end
                 remove_invalid_operation_keys!(value)
               end
@@ -204,6 +206,32 @@ module Rswag
           end
           swagger_doc[:components][:securitySchemes][name].merge!(flows: { flow => flow_elements })
         end
+      end
+
+      def upgrade_form_data_params!(operation)
+        form_data_params, operation[:parameters] =
+          operation.fetch(:parameters, [])
+                   .partition { |p| p[:in] == :formData }
+        properties = form_data_params.to_h do |param|
+          schema = param[:schema].dup
+          if schema[:type] == :file
+            schema[:type] = :string
+            schema[:format] = :binary
+          end
+          [param[:name], schema]
+        end
+        return if properties.empty?
+
+        operation[:parameters] << {
+          name: :formData,
+          in: :body,
+          required: form_data_params.any? { |p| p[:required] },
+          schema: { type: :object, properties: properties }
+        }
+        operation[:consumes] ||= [
+          form_data_params.any? { |p| p.dig(:schema, :type) == :file } ?
+            'multipart/form-data' : 'application/x-www-form-urlencoded'
+        ]
       end
 
       def remove_invalid_operation_keys!(value)
