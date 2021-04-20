@@ -80,7 +80,7 @@ module Rswag
           FileUtils.mkdir_p dirname unless File.exist?(dirname)
 
           File.open(file_path, 'w') do |file|
-            file.write(pretty_generate(doc))
+            file.puts(pretty_generate(doc))
           end
 
           @output.puts "Swagger doc generated at #{file_path}"
