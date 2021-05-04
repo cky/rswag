@@ -109,8 +109,12 @@ module Rswag
             path_template.gsub!("{#{p[:name]}}", example.send(p[:name]).to_s)
           end
 
-          parameters.select { |p| p[:in] == :query }.each_with_index do |p, i|
-            path_template.concat(i.zero? ? '?' : '&')
+          first = true
+          parameters.select { |p| p[:in] == :query }.each do |p|
+            next unless p[:required] || example.respond_to?(p[:name])
+
+            path_template.concat(first ? '?' : '&')
+            first = false
             path_template.concat(build_query_string_part(p, example.send(p[:name])))
           end
         end
